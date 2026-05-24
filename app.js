@@ -78,14 +78,11 @@ function initWhatsApp() {
         qrCodeData = '';
         console.log('WhatsApp Client is READY');
         
-        setTimeout(async () => {
+        // פונקציה פנימית מוגנת לסריקת קבוצות עם מנגנון ניסיון חוזר
+        async function safeScanGroups(retryCount = 0) {
             try {
-                console.log('מתחיל סריקת קבוצות אופטימלית...');
-                
-                // שימוש בפורמט יעיל ומהיר יותר שסורק רק קבוצות ישירות מתוך הזיכרון של הוואטסאפ
+                console.log(`מתחיל סריקת קבוצות אופטימלית... (ניסיון ${retryCount + 1})`);
                 const chats = await client.getChats();
-                
-                // סינון מהיר
                 const groups = chats.filter(chat => chat.isGroup);
                 
                 whatsappGroups = groups.map(group => {
@@ -101,11 +98,25 @@ function initWhatsApp() {
                 
                 console.log(`סריקת הקבוצות הסתיימה בהצלחה! נמצאו ${whatsappGroups.length} קבוצות.`);
             } catch (err) {
-                console.error("שגיאה קריטית בסריקת קבוצות:", err.message);
-                // במקרה של קריסה עקב עומס, ננסה שוב בעוד 15 שניות בצורה קלה יותר
-                waStatus = 'ready'; 
+                console.error("שגיאה זמנית בסריקת קבוצות:", err.message);
+                
+                // אם השגיאה קשורה לפריז או ניתוק זמני של הדפדפן, ננסה שוב בעוד 10 שניות (עד 3 פעמים)
+                if (retryCount < 3) {
+                    console.log("מנסה לסרוק שוב בעוד 10 שניות...");
+                    setTimeout(() => {
+                        safeScanGroups(retryCount + 1);
+                    }, 10000);
+                } else {
+                    console.error("סריקת הקבוצות נכשלה סופית לאחר 3 ניסיונות.");
+                    waStatus = 'ready';
+                }
             }
-        }, 10000); // נותן למערכת 10 שניות להתייצב אחרי ה-Ready
+        }
+
+        // נותן למערכת 20 שניות להתייצב לחלוטין ולסיים רענוני עמוד פנימיים לפני הסריקה הראשונה
+        setTimeout(() => {
+            safeScanGroups(0);
+        }, 20000); 
     });
 
     client.on('disconnected', (reason) => {
