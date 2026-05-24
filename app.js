@@ -49,16 +49,21 @@ function initWhatsApp() {
     waStatus = 'connecting';
     client = new Client({
         authStrategy: new LocalAuth({ clientId: "wa-broadcaster" }),
+        // הגדרת פסק הזמן הכללי של הקליינט ל-5 דקות (זה המקום הנכון עבור whatsapp-web.js)
+        webVersionCache: { type: 'remote', remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html' }, 
         puppeteer: { 
-    headless: true, 
-    protocolTimeout: 300000, 
-    args: [
-        '--no-sandbox', 
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--gpu-process-limit=1'
-    ] 
-}
+            headless: true, 
+            args: [
+                '--no-sandbox', 
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--single-process', // חוסך משמעותית בזיכרון בשרתים קטנים
+                '--disable-gpu'
+            ] 
+        }
     });
 
     client.on('qr', (qr) => {
