@@ -77,17 +77,17 @@ function initWhatsApp() {
         });
     });
 
-    // שימוש באירוע הטעינה היציב
+// עדכון הסטטוס למוכן כשהחיבור מתבצע
     client.on('ready', () => {
         waStatus = 'ready';
         qrCodeData = '';
-        console.log('WhatsApp Client is READY');
+        console.log('WhatsApp Client is READY. ממתין לסינכרון מלא של הצ\'אטים מהטלפון...');
     });
 
-    // סריקת קבוצות רק לאחר שהצ'אטים נטענו במלואם לזיכרון בבטחה
+    // הפתרון היציב לענן: סריקה רק כשוואטסאפ מודיע שהצ'אטים נטענו לזיכרון
     client.on('chats_loaded', async () => {
         try {
-            console.log('מתחיל סריקת קבוצות בטוחה...');
+            console.log('--- אירוע: כל הצ\'אטים נטענו בבטחה מוואטסאפ! מתחיל סריקה ---');
             const chats = await client.getChats();
             
             whatsappGroups = chats
@@ -97,12 +97,17 @@ function initWhatsApp() {
                     if (!groupName) {
                         groupName = "קבוצה ללא שם (" + group.id._serialized.split('@')[0] + ")";
                     }
-                    return { id: group.id._serialized, name: groupName };
+                    return { 
+                        id: group.id._serialized, 
+                        name: groupName 
+                    };
                 });
             
-            console.log(`סריקת הקבוצות הסתיימה בהצלחה! נמצאו ${whatsappGroups.length} קבוצות.`);
+            console.log(`===================================================`);
+            console.log(`✅ סריקת הקבוצות הצליחה! נמצאו ${whatsappGroups.length} קבוצות במערכת.`);
+            console.log(`===================================================`);
         } catch (err) {
-            console.error("שגיאה בסריקת קבוצות:", err.message);
+            console.error("שגיאה קריטית בזמן שליפת הקבוצות המוכנות:", err.message);
         }
     });
 
