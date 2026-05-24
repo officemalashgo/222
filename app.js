@@ -50,16 +50,15 @@ function initWhatsApp() {
     client = new Client({
         authStrategy: new LocalAuth({ clientId: "wa-broadcaster" }),
         puppeteer: { 
-            headless: true, 
-            // כאן אנחנו מגדילים את זמן ההמתנה ל-5 דקות כדי למנוע את שגיאת ה-Timeout בחשבונות גדולים
-            protocolTimeout: 300000, 
-            args: [
-                '--no-sandbox', 
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage', // מונע קריסות זיכרון במערכות עם זיכרון משותף נמוך
-                '--gpu-process-limit=1'   // מגביל משאבי גרפיקה מיותרים
-            ] 
-        }
+    headless: true, 
+    protocolTimeout: 300000, 
+    args: [
+        '--no-sandbox', 
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--gpu-process-limit=1'
+    ] 
+}
     });
 
     client.on('qr', (qr) => {
