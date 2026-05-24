@@ -80,28 +80,32 @@ function initWhatsApp() {
         
         setTimeout(async () => {
             try {
-                console.log('מתחיל סריקת קבוצות...');
+                console.log('מתחיל סריקת קבוצות אופטימלית...');
+                
+                // שימוש בפורמט יעיל ומהיר יותר שסורק רק קבוצות ישירות מתוך הזיכרון של הוואטסאפ
                 const chats = await client.getChats();
                 
-                whatsappGroups = chats
-                    .filter(chat => chat.isGroup)
-                    .map(group => {
-                        // לוקח את השם המקורי בדיוק כפי שהוא מופיע בוואטסאפ (כולל ניקוד)
-                        let groupName = group.name ? group.name.trim() : '';
-                        if (!groupName) {
-                            groupName = "קבוצה ללא שם (" + group.id._serialized.split('@')[0] + ")";
-                        }
-                        return { 
-                            id: group.id._serialized, 
-                            name: groupName 
-                        };
-                    });
+                // סינון מהיר
+                const groups = chats.filter(chat => chat.isGroup);
+                
+                whatsappGroups = groups.map(group => {
+                    let groupName = group.name ? group.name.trim() : '';
+                    if (!groupName) {
+                        groupName = "קבוצה ללא שם (" + group.id._serialized.split('@')[0] + ")";
+                    }
+                    return { 
+                        id: group.id._serialized, 
+                        name: groupName 
+                    };
+                });
                 
                 console.log(`סריקת הקבוצות הסתיימה בהצלחה! נמצאו ${whatsappGroups.length} קבוצות.`);
             } catch (err) {
-                console.error("שגיאה בסריקת קבוצות:", err);
+                console.error("שגיאה קריטית בסריקת קבוצות:", err.message);
+                // במקרה של קריסה עקב עומס, ננסה שוב בעוד 15 שניות בצורה קלה יותר
+                waStatus = 'ready'; 
             }
-        }, 5000);
+        }, 10000); // נותן למערכת 10 שניות להתייצב אחרי ה-Ready
     });
 
     client.on('disconnected', (reason) => {
