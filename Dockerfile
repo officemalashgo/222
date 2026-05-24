@@ -9,8 +9,7 @@ WORKDIR /app
 
 # העתקת קבצי הפרויקט והתקנת חבילות
 COPY package*.json ./
-RUN npm ci
-
+RUN npm install
 # העתקת שאר הקוד
 COPY . .
 
