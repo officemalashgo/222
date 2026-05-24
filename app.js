@@ -49,19 +49,23 @@ function initWhatsApp() {
     waStatus = 'connecting';
     client = new Client({
         authStrategy: new LocalAuth({ clientId: "wa-broadcaster" }),
-        // הגדרת פסק הזמן הכללי של הקליינט ל-5 דקות (זה המקום הנכון עבור whatsapp-web.js)
-        webVersionCache: { type: 'remote', remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html' }, 
+        // הגדרת זיכרון מטמון מרוחק ויציב לוואטסאפ
+        webVersionCache: { 
+            type: 'remote', 
+            remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html' 
+        },
         puppeteer: { 
             headless: true, 
+            protocolTimeout: 300000, // 5 דקות המתנה
             args: [
                 '--no-sandbox', 
                 '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--no-first-run',
-                '--no-zygote',
-                '--single-process', // חוסך משמעותית בזיכרון בשרתים קטנים
-                '--disable-gpu'
+                // --- הדגלים הקריטיים שפותרים את הבעיה בענן: ---
+                '--disable-dev-shm-usage', // מאלץ את הדפדפן להשתמש בדיסק במקום בזיכרון המשותף הקטן של Docker
+                '--single-process',        // מאלץ את כרום לרוץ כתהליך בודד וחוסך עד 70% מצריכת הזיכרון בשרת
+                '--no-zygote',             // מונע יצירת תהליכי בסיס מיותרים
+                '--no-first-run',          // מדלג על הגדרות ראשוניות של כרום
+                '--disable-gpu'            // מבטל לחלוטין האצת גרפיקה (אין בה צורך בשרת מרוחק)
             ] 
         }
     });
@@ -73,50 +77,33 @@ function initWhatsApp() {
         });
     });
 
-    client.on('ready', async () => {
+    // שימוש באירוע הטעינה היציב
+    client.on('ready', () => {
         waStatus = 'ready';
         qrCodeData = '';
         console.log('WhatsApp Client is READY');
-        
-        // פונקציה פנימית מוגנת לסריקת קבוצות עם מנגנון ניסיון חוזר
-        async function safeScanGroups(retryCount = 0) {
-            try {
-                console.log(`מתחיל סריקת קבוצות אופטימלית... (ניסיון ${retryCount + 1})`);
-                const chats = await client.getChats();
-                const groups = chats.filter(chat => chat.isGroup);
-                
-                whatsappGroups = groups.map(group => {
+    });
+
+    // סריקת קבוצות רק לאחר שהצ'אטים נטענו במלואם לזיכרון בבטחה
+    client.on('chats_loaded', async () => {
+        try {
+            console.log('מתחיל סריקת קבוצות בטוחה...');
+            const chats = await client.getChats();
+            
+            whatsappGroups = chats
+                .filter(chat => chat.isGroup)
+                .map(group => {
                     let groupName = group.name ? group.name.trim() : '';
                     if (!groupName) {
                         groupName = "קבוצה ללא שם (" + group.id._serialized.split('@')[0] + ")";
                     }
-                    return { 
-                        id: group.id._serialized, 
-                        name: groupName 
-                    };
+                    return { id: group.id._serialized, name: groupName };
                 });
-                
-                console.log(`סריקת הקבוצות הסתיימה בהצלחה! נמצאו ${whatsappGroups.length} קבוצות.`);
-            } catch (err) {
-                console.error("שגיאה זמנית בסריקת קבוצות:", err.message);
-                
-                // אם השגיאה קשורה לפריז או ניתוק זמני של הדפדפן, ננסה שוב בעוד 10 שניות (עד 3 פעמים)
-                if (retryCount < 3) {
-                    console.log("מנסה לסרוק שוב בעוד 10 שניות...");
-                    setTimeout(() => {
-                        safeScanGroups(retryCount + 1);
-                    }, 10000);
-                } else {
-                    console.error("סריקת הקבוצות נכשלה סופית לאחר 3 ניסיונות.");
-                    waStatus = 'ready';
-                }
-            }
+            
+            console.log(`סריקת הקבוצות הסתיימה בהצלחה! נמצאו ${whatsappGroups.length} קבוצות.`);
+        } catch (err) {
+            console.error("שגיאה בסריקת קבוצות:", err.message);
         }
-
-        // נותן למערכת 20 שניות להתייצב לחלוטין ולסיים רענוני עמוד פנימיים לפני הסריקה הראשונה
-        setTimeout(() => {
-            safeScanGroups(0);
-        }, 20000); 
     });
 
     client.on('disconnected', (reason) => {
